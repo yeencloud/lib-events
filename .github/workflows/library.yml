@@ -1,0 +1,12 @@
+name: Test library
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:  # optional, if you want manual runs from the Actions tab
+
+jobs:
+  test-and-lint:
+    uses: yeencloud/dpl-ci/.github/workflows/test.yml@main
