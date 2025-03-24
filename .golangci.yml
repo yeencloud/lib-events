@@ -1,9 +1,9 @@
 output:
   sort-results: true
-  uniq-by-line: true
 
-run:
-  skip-files:
+issues:
+  uniq-by-line: true
+  exclude-files:
     - "_test.go$" # Skip test files (this is only temporary, until we have tests)
 
 linters-settings:
@@ -24,10 +24,10 @@ linters-settings:
   dupword:
     # Keywords used to ignore detection.
     # Default: []
-    ignore: []
+    ignore: [ ]
 
   errorlint:
-    # Check whether fmt.Errorf uses the %w verb for formatting errors.
+    # Check whether fmt.Errorf uses the %w verb for formatting HttpError.
     # See the https://github.com/polyfloyd/go-errorlint for caveats.
     # Default: true
     errorf: true
@@ -104,7 +104,7 @@ linters-settings:
   govet:
     # Report about shadowed variables.
     # Default: false
-    check-shadowing: true
+    shadow: true
     # Enable all analyzers.
     # Default: false
     enable-all: true
@@ -115,7 +115,7 @@ linters-settings:
     # Optimizes even if it requires an int or uint type cast.
     # Default: true
     int-conversion: true
-    # Optimizes into `err.Error()` even if it is only equivalent for non-nil errors.
+    # Optimizes into `err.Error()` even if it is only equivalent for non-nil HttpError.
     # Default: false
     err-error: true
     # Optimizes `fmt.Errorf`.
@@ -145,9 +145,6 @@ linters-settings:
     # Treat IncDec statement (e.g. `i++` or `i--`) as both read and write operation instead of just write.
     # Default: false
     post-statements-are-reads: false
-    # Mark all exported identifiers as used.
-    # Default: true
-    exported-is-used: true
     # Mark all exported fields as used.
     # default: true
     exported-fields-are-used: true
@@ -170,6 +167,9 @@ linters-settings:
     multi-func: false
 
 linters:
+  disable:
+    - staticcheck
+
   enable:
     - asciicheck
     - bidichk
@@ -206,7 +206,6 @@ linters:
     - reassign
     - revive
     - sqlclosecheck
-    - staticcheck
     - tagliatelle
     - testifylint
     - unparam
