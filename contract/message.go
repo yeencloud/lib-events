@@ -1,6 +1,6 @@
 package contract
 
-type Message[T any] struct {
+type Message struct {
 	Header Header
-	Body   T
+	Body   any
 }
