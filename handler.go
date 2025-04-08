@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 
 	log "github.com/sirupsen/logrus"
 	metrics2 "github.com/yeencloud/lib-events/metrics"
@@ -61,17 +62,28 @@ func (b *BasicHandler) MsgReceived(event contract.Message) {
 		ctx = b.CreateLoggerForEvent(ctx, event)
 		metric, ctx := b.CreateMetricsForRequest(ctx, event)
 
-		logShared.GetLoggerFromContext(ctx).Info("Received event: ", b.channel)
+		logShared.GetLoggerFromContext(ctx).Info("Received event: ", event.Header.Event)
+
+		defer func() {
+			if r := recover(); r != nil {
+				metric.Status = "Panic"
+				metric.Message = fmt.Sprintf("%v", r)
+				// TODO: Change error text (panic'ed feels weird)
+				log.WithContext(ctx).WithField("panic", metric.Message).WithField("trace", string(debug.Stack())).Error("Event processing panic'ed")
+				_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
+			}
+		}()
+
 		err := handler(ctx, event.Body)
 
 		if err != nil {
 			log.WithContext(ctx).WithError(err).Error("Event processing failed")
-			metric.Status = "Error: " + err.Error()
+			metric.Status = "Error"
+			metric.Message = err.Error()
 		} else {
 			log.WithContext(ctx).Info("Event processing succeeded")
 			metric.Status = "Success"
 		}
-
 		_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
 	}
 }

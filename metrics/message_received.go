@@ -5,4 +5,5 @@ type MessageReceivedMetric struct {
 	Event   string `metric:"event"`
 	Payload string `metric:"payload"`
 	Status  string `metric:"status"`
+	Message string `metric:"message"`
 }
