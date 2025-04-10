@@ -9,12 +9,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/yeencloud/lib-events/contract"
 	"github.com/yeencloud/lib-events/domain"
+	"github.com/yeencloud/lib-shared/validation"
 )
 
 type Subscriber struct {
 	client *redis.Client
 
 	subscriptions map[string]domain.EventHandler
+	Validator     *validation.Validator
 }
 
 func (s *Subscriber) listSubscriptions() []string {
@@ -56,8 +58,9 @@ func (s *Subscriber) subscribe(ctx context.Context) (*redis.PubSub, error) {
 
 func (s *Subscriber) Subscribe(channel string) *BasicHandler {
 	receiver := BasicHandler{
-		channel:  channel,
-		handlers: &map[string]domain.EventHandlerFunc{},
+		channel:   channel,
+		handlers:  &map[string]domain.EventHandlerFunc{},
+		validator: s.Validator,
 	}
 	s.subscriptions[channel] = &receiver
 	log.WithField("channel", channel).Info("Subscribing to channel")
@@ -91,10 +94,11 @@ func (s *Subscriber) Listen(ctx context.Context) error {
 
 	return nil
 }
-func NewSubscriber(rdb *redis.Client) *Subscriber {
+func NewSubscriber(validator *validation.Validator, rdb *redis.Client) *Subscriber {
 	return &Subscriber{
 		client: rdb,
 
 		subscriptions: map[string]domain.EventHandler{},
+		Validator:     validator,
 	}
 }

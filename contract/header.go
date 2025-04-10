@@ -1,8 +1,8 @@
 package contract
 
 type Header struct {
-	Date          string
-	Event         string
-	CorrelationID string
-	UserID        string
+	Date          string  `validate:"required,date_time"`
+	Event         string  `validate:"required,event_name"`
+	CorrelationID string  `validate:"required,uuid"`
+	UserID        *string `validate:"omitempty,uuid"`
 }

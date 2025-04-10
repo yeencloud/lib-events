@@ -1,12 +1,15 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/yeencloud/lib-shared/validation"
 )
 
 // TODO: Use real errors
-func DecodeEvent[T any](event any) (*T, error) {
+func DecodeEvent[T any](v *validation.Validator, ctx context.Context, event any) (*T, error) {
 	eventMap, ok := event.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("unexpected event type: %T", event)
@@ -18,10 +21,14 @@ func DecodeEvent[T any](event any) (*T, error) {
 	}
 
 	var decodedEvent T
-	if err := json.Unmarshal(eventJSON, &decodedEvent); err != nil {
+	if err = json.Unmarshal(eventJSON, &decodedEvent); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal to %T: %w", decodedEvent, err)
 	}
 
-	// TODO: Add Validation for T
+	err = v.StructCtx(ctx, decodedEvent)
+	if err != nil {
+		return nil, err
+	}
+
 	return &decodedEvent, nil
 }

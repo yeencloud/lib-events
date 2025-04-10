@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	metrics2 "github.com/yeencloud/lib-events/metrics"
+	"github.com/yeencloud/lib-shared/validation"
 
 	"github.com/yeencloud/lib-events/contract"
 	"github.com/yeencloud/lib-events/domain"
@@ -17,8 +18,9 @@ import (
 )
 
 type BasicHandler struct {
-	channel  string
-	handlers *map[string]domain.EventHandlerFunc
+	channel   string
+	handlers  *map[string]domain.EventHandlerFunc
+	validator *validation.Validator
 }
 
 func (b *BasicHandler) CreateLoggerForEvent(ctx context.Context, event contract.Message) context.Context {
@@ -52,39 +54,50 @@ func (b *BasicHandler) CreateMetricsForRequest(ctx context.Context, event contra
 	return metric, ctx
 }
 
+func (b *BasicHandler) handleResponse(ctx context.Context, err error, metric metrics2.MessageReceivedMetric) {
+	if err != nil {
+		log.WithContext(ctx).WithError(err).Error("Event processing failed")
+		metric.Status = "Error"
+		metric.Message = err.Error()
+	} else {
+		log.WithContext(ctx).Info("Event processing succeeded")
+		metric.Status = "Success"
+	}
+	_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
+}
+
 func (b *BasicHandler) MsgReceived(event contract.Message) {
 	if b.handlers == nil {
 		b.handlers = &map[string]domain.EventHandlerFunc{}
 	}
+
 	handler, exists := (*b.handlers)[event.Header.Event]
-	if exists {
-		ctx := context.Background()
-		ctx = b.CreateLoggerForEvent(ctx, event)
-		metric, ctx := b.CreateMetricsForRequest(ctx, event)
+	if !exists {
+		return
+	}
 
-		logShared.GetLoggerFromContext(ctx).Info("Received event: ", event.Header.Event)
+	ctx := context.Background()
+	ctx = b.CreateLoggerForEvent(ctx, event)
+	metric, ctx := b.CreateMetricsForRequest(ctx, event)
 
-		defer func() {
-			if r := recover(); r != nil {
-				metric.Status = "Panic"
-				metric.Message = fmt.Sprintf("%v", r)
-				// TODO: Change error text (panic'ed feels weird)
-				log.WithContext(ctx).WithField("panic", metric.Message).WithField("trace", string(debug.Stack())).Error("Event processing panic'ed")
-				_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
-			}
-		}()
+	logShared.GetLoggerFromContext(ctx).Info("Received event: ", event.Header.Event)
 
-		err := handler(ctx, event.Body)
-
-		if err != nil {
-			log.WithContext(ctx).WithError(err).Error("Event processing failed")
-			metric.Status = "Error"
-			metric.Message = err.Error()
-		} else {
-			log.WithContext(ctx).Info("Event processing succeeded")
-			metric.Status = "Success"
+	defer func() {
+		if r := recover(); r != nil {
+			metric.Status = "Panic"
+			metric.Message = fmt.Sprintf("%v", r)
+			// TODO: Change error text (panic'ed feels weird)
+			log.WithContext(ctx).WithField("panic", metric.Message).WithField("trace", string(debug.Stack())).Error("Event processing panic'ed")
+			_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
 		}
-		_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
+	}()
+
+	err := b.validator.StructCtx(ctx, event.Header)
+	if err != nil {
+		b.handleResponse(ctx, err, metric)
+	} else {
+		err = handler(ctx, event.Body) // Call the handler on the service
+		b.handleResponse(ctx, err, metric)
 	}
 }
 
