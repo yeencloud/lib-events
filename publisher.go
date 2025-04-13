@@ -27,13 +27,16 @@ func (p Publisher) Publish(ctx context.Context, message domain.PublishableMessag
 	event := message.EventType()
 	channel := message.Channel()
 
-	tags := ctx.Value(sharedMetrics.MetricsPointKey).(MetricsDomain.Point).Tags
+	point, ok := ctx.Value(sharedMetrics.MetricsPointKey).(MetricsDomain.Point)
+	if !ok {
+		point = metrics.NewPoint()
+	}
 
 	messageToSend := contract.Message{
 		Header: contract.Header{
 			Date:          time.Now().String(),
 			Event:         event,
-			CorrelationID: tags[sharedMetrics.CorrelationIdKey.MetricKey()],
+			CorrelationID: point.Tags[sharedMetrics.CorrelationIdKey.MetricKey()],
 		},
 		Body: message,
 	}

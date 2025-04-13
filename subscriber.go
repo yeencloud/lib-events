@@ -22,7 +22,7 @@ type Subscriber struct {
 func (s *Subscriber) listSubscriptions() []string {
 	channels := make([]string, 0, len(s.subscriptions))
 
-	for channel, _ := range s.subscriptions {
+	for channel := range s.subscriptions {
 		channels = append(channels, channel)
 	}
 
