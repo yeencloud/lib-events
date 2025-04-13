@@ -8,8 +8,8 @@ require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/sirupsen/logrus v1.9.3
-	github.com/yeencloud/lib-metrics v0.2.4
-	github.com/yeencloud/lib-shared v0.2.5
+	github.com/yeencloud/lib-metrics v0.2.5
+	github.com/yeencloud/lib-shared v0.2.9
 )
 
 require (
