@@ -46,7 +46,7 @@ func (b *BasicHandler) CreateMetricsForRequest(ctx context.Context, event contra
 func (b *BasicHandler) handleResponse(ctx context.Context, err error, metric metrics2.MessageReceivedMetric) {
 	if err != nil {
 		log.WithContext(ctx).WithError(err).Error("Event processing failed")
-		metric.Message = fmt.Sprintf("Error: %s", err.Error())
+		metric.Message = "Error: %s" + err.Error()
 	} else {
 		log.WithContext(ctx).Info("Event processing succeeded")
 	}
