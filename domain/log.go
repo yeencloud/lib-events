@@ -21,6 +21,7 @@ var (
 
 	LogEventsReceivedChannelField       = namespace.Namespace{Parent: &LogEventsReceivedScope, Identifier: "channel"}
 	LogEventsReceivedEventTypeField     = namespace.Namespace{Parent: &LogEventsReceivedScope, Identifier: "event_type"}
+	LogEventsReceivedMessageIdField     = namespace.Namespace{Parent: &LogEventsReceivedScope, Identifier: "message_id"}
 	LogEventsReceivedCorrelationIdField = namespace.Namespace{Parent: &LogEventsReceivedScope, Identifier: "correlation_id"}
 	LogEventsReceivedPayloadField       = namespace.Namespace{Parent: &LogEventsReceivedScope, Identifier: "payload"}
 	LogEventsReceivedStatusField        = namespace.Namespace{Parent: &LogEventsReceivedScope, Identifier: "status"}

@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	log "github.com/sirupsen/logrus"
 	"github.com/yeencloud/lib-events/contract"
 	"github.com/yeencloud/lib-events/domain"
 	metrics "github.com/yeencloud/lib-metrics"
 	MetricsDomain "github.com/yeencloud/lib-metrics/domain"
+	lib_shared "github.com/yeencloud/lib-shared"
 	sharedMetrics "github.com/yeencloud/lib-shared/metrics"
 )
 
@@ -32,23 +34,30 @@ func (p Publisher) Publish(ctx context.Context, message domain.PublishableMessag
 		point = metrics.NewPoint()
 	}
 
-	messageToSend := contract.Message{
-		Header: contract.Header{
-			Date:          time.Now().String(),
-			Event:         event,
-			CorrelationID: point.Tags[sharedMetrics.CorrelationIdKey.MetricKey()],
-		},
-		Body: message,
-	}
-
-	j, _ := json.Marshal(messageToSend)
-
-	err := p.client.Publish(ctx, channel, j).Err()
+	err := p.client.XGroupCreateMkStream(ctx, lib_shared.AppName, channel, "0").Err()
 	if err != nil {
 		return err
 	}
 
-	j, _ = json.Marshal(messageToSend.Body)
+	id, err := p.client.XAdd(ctx, &redis.XAddArgs{
+		Stream: lib_shared.AppName,
+		Values: map[string]interface{}{
+			"header": contract.Header{
+				Date:          time.Now().String(),
+				Event:         event,
+				CorrelationID: point.Tags[sharedMetrics.CorrelationIdKey.MetricKey()],
+			},
+			"message": message,
+		},
+	}).Result()
+
+	log.WithContext(ctx).Info("Published message with id: ", id)
+	// err := p.client.Publish(ctx, channel, j).Err()
+	if err != nil {
+		return err
+	}
+
+	j, _ := json.Marshal(message)
 	return metrics.WritePoint(ctx, domain.PublishedEventsMetricPointName, MessagePublishedMetric{
 		Channel: channel,
 		Event:   event,

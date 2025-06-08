@@ -23,16 +23,6 @@ type BasicHandler struct {
 	validator *validation.Validator
 }
 
-func (b *BasicHandler) CreateLoggerForEvent(ctx context.Context, event contract.Message) context.Context {
-	logEntry := log.NewEntry(log.StandardLogger())
-
-	logEntry = domain.LogEventsReceivedChannelField.WithValue(b.channel).AsField(logEntry)
-	logEntry = domain.LogEventsReceivedEventTypeField.WithValue(event.Header.Event).AsField(logEntry)
-	logEntry = domain.LogEventsReceivedCorrelationIdField.WithValue(event.Header.CorrelationID).AsField(logEntry)
-
-	return logShared.WithLogger(ctx, logEntry)
-}
-
 func (b *BasicHandler) CreateMetricsForRequest(ctx context.Context, event contract.Message) (metrics2.MessageReceivedMetric, context.Context) {
 	ctx = metrics.SetTag(ctx, sharedMetrics.CorrelationIdKey.MetricKey(), event.Header.CorrelationID)
 
@@ -48,7 +38,6 @@ func (b *BasicHandler) CreateMetricsForRequest(ctx context.Context, event contra
 		Channel: b.channel,
 		Event:   event.Header.Event,
 		Payload: payload,
-		Status:  "",
 	}
 
 	return metric, ctx
@@ -57,37 +46,31 @@ func (b *BasicHandler) CreateMetricsForRequest(ctx context.Context, event contra
 func (b *BasicHandler) handleResponse(ctx context.Context, err error, metric metrics2.MessageReceivedMetric) {
 	if err != nil {
 		log.WithContext(ctx).WithError(err).Error("Event processing failed")
-		metric.Status = "Error"
-		metric.Message = err.Error()
+		metric.Message = fmt.Sprintf("Error: %s", err.Error())
 	} else {
 		log.WithContext(ctx).Info("Event processing succeeded")
-		metric.Status = "Success"
 	}
 	_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
 }
 
-func (b *BasicHandler) MsgReceived(event contract.Message) {
+func (b *BasicHandler) MsgReceived(ctx context.Context, event contract.Message) {
 	if b.handlers == nil {
 		b.handlers = &map[string]domain.EventHandlerFunc{}
 	}
 
-	handler, exists := (*b.handlers)[event.Header.Event]
+	serviceHandler, exists := (*b.handlers)[event.Header.Event]
 	if !exists {
 		return
 	}
 
-	ctx := context.Background()
-	ctx = b.CreateLoggerForEvent(ctx, event)
 	metric, ctx := b.CreateMetricsForRequest(ctx, event)
 
 	logShared.GetLoggerFromContext(ctx).Info("Received event: ", event.Header.Event)
 
 	defer func() {
 		if r := recover(); r != nil {
-			metric.Status = "Panic"
-			metric.Message = fmt.Sprintf("%v", r)
-			// TODO: Change error text (panic'ed feels weird)
-			log.WithContext(ctx).WithField("panic", metric.Message).WithField("trace", string(debug.Stack())).Error("Event processing panic'ed")
+			metric.Message = fmt.Sprintf("Panic %v", r)
+			log.WithContext(ctx).WithField("panic", metric.Message).WithField("trace", string(debug.Stack())).Error("Event processing did panic")
 			_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
 		}
 	}()
@@ -96,7 +79,7 @@ func (b *BasicHandler) MsgReceived(event contract.Message) {
 	if err != nil {
 		b.handleResponse(ctx, err, metric)
 	} else {
-		err = handler(ctx, event.Body) // Call the handler on the service
+		err = serviceHandler(ctx, event.Body)
 		b.handleResponse(ctx, err, metric)
 	}
 }
