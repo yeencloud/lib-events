@@ -9,7 +9,7 @@ import (
 type EventHandlerFunc func(ctx context.Context, eventJson string) error
 
 type EventHandler interface {
-	Handle(event string, handler EventHandlerFunc)
+	Register(event string, handler EventHandlerFunc)
 
-	MsgReceived(ctx context.Context, event contract.Message)
+	MsgReceived(ctx context.Context, event contract.Message, ack func())
 }

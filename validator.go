@@ -10,22 +10,27 @@ import (
 	"github.com/yeencloud/lib-shared/validation"
 )
 
+var eventNameValidatorRegex = regexp.MustCompile("^[A-Z_]+$")
+
+var errEventNameMustNotBeEmpty = errors.New("event name cannot be empty")
+var errEventNameMustNotEndWithUnderscoreEvent = errors.New("event name must not end with '_EVENT'")
+var errEventNameMustValidateRegex = errors.New("event name must match the regex " + eventNameValidatorRegex.String())
+
 func eventNameValidator(ctx context.Context, fl validator.FieldLevel) error {
 	value := fl.Field().String()
 
 	if len(value) == 0 {
-		return errors.New("event name cannot be empty")
+		return errEventNameMustNotBeEmpty
 	}
 
 	// Events must be uppercase and can contain underscores
-	re := regexp.MustCompile(`^[A-Z_]+$`) // TODO: MustCompile shold be used only once for performance
-	if !re.MatchString(value) {
-		return errors.New("event name must match the regex " + re.String())
+	if !eventNameValidatorRegex.MatchString(value) {
+		return errEventNameMustValidateRegex
 	}
 
 	// Enforcing this so event names are more natural (e.g. USER_CREATED instead of USER_CREATED_EVENT)
 	if strings.HasSuffix(value, "_EVENT") {
-		return errors.New("event name must not end with '_EVENT'")
+		return errEventNameMustNotEndWithUnderscoreEvent
 	}
 	return nil
 }

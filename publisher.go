@@ -11,7 +11,7 @@ import (
 	"github.com/yeencloud/lib-events/domain"
 	metrics "github.com/yeencloud/lib-metrics"
 	MetricsDomain "github.com/yeencloud/lib-metrics/domain"
-	lib_shared "github.com/yeencloud/lib-shared"
+	lib_shared "github.com/yeencloud/lib-shared/domain"
 	sharedMetrics "github.com/yeencloud/lib-shared/metrics"
 )
 
@@ -34,7 +34,7 @@ func (p Publisher) Publish(ctx context.Context, message domain.PublishableMessag
 		point = metrics.NewPoint()
 	}
 
-	err := p.client.XGroupCreateMkStream(ctx, lib_shared.AppName, channel, "0").Err()
+	err := p.client.XGroupCreateMkStream(ctx, channel, "*", "0").Err()
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,6 @@ func (p Publisher) Publish(ctx context.Context, message domain.PublishableMessag
 	}).Result()
 
 	log.WithContext(ctx).Info("Published message with id: ", id)
-	// err := p.client.Publish(ctx, channel, j).Err()
 	if err != nil {
 		return err
 	}
