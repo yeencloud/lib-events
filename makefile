@@ -14,3 +14,6 @@ test:
 
 openapi:
 	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+
+air:
+	go tool air --build.cmd "go build -o $(notdir $(CURDIR))exe cmd/main.go" --build.entrypoint "./$(notdir $(CURDIR))exe" --build.include_file ".env" --build.include_dir "../../libs"
