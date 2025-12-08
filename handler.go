@@ -52,8 +52,8 @@ func (b *BasicHandler) handleResponse(ctx context.Context, err error, metric dom
 	_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
 }
 
-func (b *BasicHandler) handlePanic(ctx context.Context, metric domain.MessageReceivedMetric, recover any) {
-	metric.Message = fmt.Sprintf("Panic %v", recover)
+func (b *BasicHandler) handlePanic(ctx context.Context, metric domain.MessageReceivedMetric, recovered any) {
+	metric.Message = fmt.Sprintf("Panic %v", recovered)
 	log.WithContext(ctx).WithField("panic", metric.Message).WithField("trace", string(debug.Stack())).Error("Event processing did panic")
 	_ = metrics.WritePoint(ctx, domain.ReceivedEventsMetricPointName, metric)
 }

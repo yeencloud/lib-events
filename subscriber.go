@@ -99,7 +99,7 @@ func (s *Subscriber) Listen(ctx context.Context) error {
 		for _, xstream := range xstreams {
 			// Parsing through received messages
 			for _, msg := range xstream.Messages {
-				s.processReceivedMessage(xstream.Stream, msg)
+				s.processReceivedMessage(xstream.Stream, msg) //nolint: contextcheck
 			}
 		}
 	}
@@ -132,8 +132,8 @@ func (s *Subscriber) processMessageStuckInQueue(ctx context.Context) {
 				Messages: []string{pendingMessage.ID},
 			})
 
-			if err := claimResponse.Err(); err != nil {
-				log.WithContext(ctx).WithError(err).Errorf("Unable to claim id: %d", pendingMessage.ID)
+			if err = claimResponse.Err(); err != nil {
+				log.WithContext(ctx).WithError(err).Errorf("Unable to claim id: %s", pendingMessage.ID)
 				continue
 			}
 
@@ -143,7 +143,7 @@ func (s *Subscriber) processMessageStuckInQueue(ctx context.Context) {
 			}
 
 			msg := claimResponse.Val()[0]
-			s.processReceivedMessage(stream, msg)
+			s.processReceivedMessage(stream, msg) //nolint: contextcheck
 		}
 	}
 }
