@@ -10,7 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/yeencloud/lib-events/contract"
 	"github.com/yeencloud/lib-events/domain"
-	metrics "github.com/yeencloud/lib-metrics"
 	logShared "github.com/yeencloud/lib-shared/log"
 	"github.com/yeencloud/lib-shared/validation"
 )
@@ -163,7 +162,7 @@ func (s *Subscriber) processReceivedMessage(stream string, msg redis.XMessage) {
 	logEntry = domain.LogEventsReceivedChannelField.WithValue(stream).AsField(logEntry)
 	logEntry = domain.LogEventsReceivedMessageIdField.WithValue(msg.ID).AsField(logEntry)
 	msgCtx = logShared.WithLogger(msgCtx, logEntry)
-	msgCtx = metrics.SetTag(msgCtx, domain.MessageIdKey.MetricKey(), msg.ID)
+
 	log.WithContext(msgCtx).Debugf("Received event: %v", msg)
 
 	// Header

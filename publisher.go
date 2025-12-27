@@ -2,17 +2,13 @@ package events
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/go-redis/redis/v8"
 	log "github.com/sirupsen/logrus"
 	"github.com/yeencloud/lib-events/contract"
 	"github.com/yeencloud/lib-events/domain"
-	metrics "github.com/yeencloud/lib-metrics"
-	MetricsDomain "github.com/yeencloud/lib-metrics/domain"
 	lib_shared "github.com/yeencloud/lib-shared/domain"
-	sharedMetrics "github.com/yeencloud/lib-shared/metrics"
 )
 
 type Publisher struct {
@@ -29,11 +25,6 @@ func (p Publisher) Publish(ctx context.Context, message domain.PublishableMessag
 	event := message.EventType()
 	channel := message.Channel()
 
-	point, ok := ctx.Value(sharedMetrics.MetricsPointKey).(MetricsDomain.Point)
-	if !ok {
-		point = metrics.NewPoint()
-	}
-
 	err := p.client.XGroupCreateMkStream(ctx, channel, "*", "0").Err()
 	if err != nil {
 		return err
@@ -43,9 +34,9 @@ func (p Publisher) Publish(ctx context.Context, message domain.PublishableMessag
 		Stream: lib_shared.AppName,
 		Values: map[string]interface{}{
 			"header": contract.Header{
-				Date:          time.Now().String(),
-				Event:         event,
-				CorrelationID: point.Tags[sharedMetrics.CorrelationIdKey.MetricKey()],
+				Date:  time.Now().String(),
+				Event: event,
+				//TODO: CorrelationID: point.Tags[sharedMetrics.CorrelationIdKey.MetricKey()],
 			},
 			"message": message,
 		},
@@ -56,12 +47,7 @@ func (p Publisher) Publish(ctx context.Context, message domain.PublishableMessag
 		return err
 	}
 
-	j, _ := json.Marshal(message)
-	return metrics.WritePoint(ctx, domain.PublishedEventsMetricPointName, MessagePublishedMetric{
-		Channel: channel,
-		Event:   event,
-		Payload: string(j),
-	})
+	return nil
 }
 
 func NewPublisher(client *redis.Client) *Publisher {
